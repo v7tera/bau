@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uso do Baú</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            height: auto;
+            background-color: #f0f0f0;
+            overflow-y: scroll; /* Garantir que a rolagem vertical funcione em toda a página */
+            min-height: 100vh; /* Assegura que a altura mínima da página seja suficiente para rolar */
+        }
+        .container {
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            width: 100%;
+            text-align: left;
+            overflow: visible; /* Deixe o conteúdo rolar sem interferir */
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        label {
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        input[type="text"], input[type="number"], input[type="time"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            padding: 12px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 48%;
+        }
+        .generate-button {
+            background-color: #28a745;
+            color: white;
+        }
+        .generate-button:hover {
+            background-color: #218838;
+        }
+        .reset-button {
+            background-color: #dc3545;
+            color: white;
+        }
+        .reset-button:hover {
+            background-color: #c82333;
+        }
+        .notification {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            display: none;
+        }
+        .notification.success {
+            background-color: #28a745;
+            color: white;
+        }
+        .notification.error {
+            background-color: #dc3545;
+            color: white;
+        }
+        .generated-text-container {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            background-color: #f9f9f9;
+            white-space: pre-wrap;
+            display: none;
+        }
+        .generated-text {
+            flex: 1;
+            font-size: 16px;
+        }
+        .copy-button {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #007bff;
+            align-self: center;
+        }
+        .copy-button:hover {
+            color: #0056b3;
+        }
+        /* Contorno preto para a área das 3 informações */
+        .separate-text-container {
+            margin-top: 10px;
+            padding: 10px;
+            border: 2px solid black; /* Borda preta */
+            border-radius: 5px;
+            background-color: #f0f0f0;
+            display: none; /* Inicialmente invisível */
+        }
+        .separate-text {
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        .highlight-red-r {
+            color: red;
+            font-weight: bold;
+        }
+        .highlight-green-r {
+            color: green;
+            font-weight: bold;
+        }
+        .highlight-black-r {
+            color: black;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Uso do Baú</h1>
+        <label for="tinha">Tinha:</label>
+        <input type="text" id="tinha" placeholder="Digite quantos kits tinha (verificar em uso-do-baú)" />
+
+        <label for="tem">Tem:</label>
+        <input type="text" id="tem" placeholder="Digite quantos kits terão (subtrair kits vendidos dos que tinha)" />
+
+        <label for="buyer-name">Nome:</label>
+        <input type="text" id="buyer-name" placeholder="Digite o nome do comprador" />
+
+        <label for="passport">Passaporte:</label>
+        <input type="number" id="passport" placeholder="Digite o passaporte do comprador" />
+
+        <label for="profession">Profissão:</label>
+        <input type="text" id="profession" placeholder="Digite a profissão (se for facção, use 'Nenhuma')" />
+
+        <label for="quantity">Quantidade:</label>
+        <input type="number" id="quantity" placeholder="Digite a quantidade de kits (mínimo de 5)" oninput="calculatePrice()" min="5" />
+
+        <label for="value">Valor Total:</label>
+        <input type="text" id="value" disabled />
+
+        <label for="tax-id">ID do Imposto:</label>
+        <input type="text" id="tax-id" value="226" disabled />
+
+        <label for="time">Hora:</label>
+        <input type="time" id="time" />
+
+        <div class="button-container">
+            <button class="generate-button" onclick="generateText()">Gerar Texto</button>
+            <button class="reset-button" onclick="resetForm()">Resetar</button>
+        </div>
+
+        <div id="notification" class="notification"></div>
+
+        <!-- Container para o texto gerado (sem as partes que não devem ser copiadas) -->
+        <div id="generated-output" class="generated-text-container">
+            <div id="generated-content" class="generated-text"></div>
+            <button id="copy-btn" class="copy-button" onclick="copyText()">📝</button>
+        </div>
+
+        <!-- Único contorno com as 3 informações, visível apenas quando o texto for gerado -->
+        <div id="separate-text-container" class="separate-text-container">
+            <div id="client-payment" class="separate-text"></div>
+            <div id="tax-bennys" class="separate-text"></div>
+            <div id="profit" class="separate-text"></div>
+        </div>
+    </div>
+
+    <script>
+        function showNotification(message, type = "success") {
+            const notification = document.getElementById("notification");
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.style.display = "block";
+            setTimeout(() => {
+                notification.style.display = "none";
+            }, 3000);
+        }
+
+        function calculatePrice() {
+            const pricePerKit = 5000;  // Preço por kit
+            const taxPerKit = 2000;    // Taxa por kit
+            const quantity = parseInt(document.getElementById("quantity").value);
+
+            if (!quantity || quantity < 5) {
+                document.getElementById("value").value = "";
+                return;
+            }
+
+            const totalPrice = pricePerKit * quantity;
+            const totalTaxes = taxPerKit * quantity;
+            const totalProfit = totalPrice - totalTaxes;
+
+            document.getElementById("value").value = `R$${totalPrice.toLocaleString('pt-BR')}`;
+
+            return { totalPrice, totalTaxes, totalProfit };
+        }
+
+        function generateText() {
+            const tinha = document.getElementById("tinha").value;
+            const tem = document.getElementById("tem").value;
+            const buyerName = document.getElementById("buyer-name").value;
+            const passport = document.getElementById("passport").value;
+            const profession = document.getElementById("profession").value;
+            const quantity = document.getElementById("quantity").value;
+            const value = document.getElementById("value").value;
+            const taxId = document.getElementById("tax-id").value;
+            const time = document.getElementById("time").value;
+
+            if (!tinha || !tem || !buyerName || !passport || !profession || !quantity || !value || !time) {
+                showNotification("Preencha todos os campos!", "error");
+                return;
+            }
+
+            const { totalPrice, totalTaxes, totalProfit } = calculatePrice();
+
+            // Gerar o texto completo com Tinha e Tem
+            const text = `Tinha: ${tinha}\nTem: ${tem}\nNome: ${buyerName}\nPassaporte: ${passport}\nProfissão: ${profession}\nQuantidade de Kits: ${quantity}\nValor Total: ${value}\nID do Imposto: ${taxId}\nHora: ${time}`;
+            const clientPayment = `<strong>Cliente paga:</strong> <strong class="highlight-black-r">R$${totalPrice.toLocaleString('pt-BR')}</strong>`;
+            const taxBennys = `<strong>Taxa Bennys:</strong> <span class="highlight-red-r">R$${totalTaxes.toLocaleString('pt-BR')}</span>`;
+            const profit = `<strong>Lucro do mecânico:</strong> <span class="highlight-green-r">R$${totalProfit.toLocaleString('pt-BR')}</span>`;
+
+            document.getElementById("generated-content").textContent = text;
+            document.getElementById("separate-text-container").style.display = "block";
+
+            document.getElementById("client-payment").innerHTML = clientPayment;
+            document.getElementById("tax-bennys").innerHTML = taxBennys;
+            document.getElementById("profit").innerHTML = profit;
+
+            document.getElementById("generated-output").style.display = "flex";  // Exibe o texto gerado
+        }
+
+        function copyText() {
+            const text = document.getElementById("generated-content").textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                showNotification("Texto copiado com sucesso!", "success");
+            }, () => {
+                showNotification("Falha ao copiar o texto.", "error");
+            });
+        }
+
+        function resetForm() {
+            document.getElementById("tinha").value = "";
+            document.getElementById("tem").value = "";
+            document.getElementById("buyer-name").value = "";
+            document.getElementById("passport").value = "";
+            document.getElementById("profession").value = "";
+            document.getElementById("quantity").value = "";
+            document.getElementById("value").value = "";
+            document.getElementById("tax-id").value = "226";
+            document.getElementById("time").value = "";
+            document.getElementById("generated-output").style.display = "none";
+            document.getElementById("separate-text-container").style.display = "none";
+        }
+    </script>
+</body>
+</html>
